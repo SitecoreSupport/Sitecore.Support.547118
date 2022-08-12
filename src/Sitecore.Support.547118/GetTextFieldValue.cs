@@ -1,30 +1,23 @@
-﻿using Sitecore.Configuration;
+﻿using Sitecore.Abstractions;
+using Sitecore.Configuration.KnownSettings;
 using Sitecore.Diagnostics;
 using Sitecore.Pipelines.RenderField;
-using System;
+using System.Linq;
+using System.Reflection;
 using System.Web;
 
 namespace Sitecore.Support.Pipelines.RenderField
 {
-    public class GetTextFieldValue
+    public class GetTextFieldValue: Sitecore.Pipelines.RenderField.GetTextFieldValue
     {
-        public void Process([NotNull] RenderFieldArgs args)
+        private static readonly BindingFlags _bflags = BindingFlags.NonPublic | BindingFlags.Static;
+        private static readonly PropertyInfo SettingsInstance_Prop = typeof(Sitecore.Configuration.Settings).GetProperty("SettingsInstance", _bflags);
+        private static readonly BaseSettings SettingsInstance = SettingsInstance_Prop.GetValue(null) as Sitecore.Abstractions.BaseSettings;
+
+        protected override void EncodeFieldValue([NotNull] RenderFieldArgs args)
         {
             Assert.ArgumentNotNull(args, "args");
-
-            this.EncodeFieldValue(args);
-
-            var typeKey = args.FieldTypeKey;
-            if (typeKey.Equals("text", StringComparison.InvariantCulture) || typeKey.Equals("single-line text", StringComparison.InvariantCulture))
-            {
-                args.WebEditParameters.Add("prevent-line-break", "true");
-            }
-        }
-
-        protected virtual void EncodeFieldValue([NotNull] RenderFieldArgs args)
-        {
-            Assert.ArgumentNotNull(args, "args");
-            if (Settings.Rendering.HtmlEncodedFieldTypes.Contains(args.FieldTypeKey))
+            if (SettingsInstance.Rendering().HtmlEncodedFieldTypes.Contains(args.FieldTypeKey))
             {
                 args.Result.FirstPart = HttpUtility.HtmlEncode(args.Result.FirstPart);
             }
